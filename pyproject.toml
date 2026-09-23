@@ -1,0 +1,10 @@
+[project]
+name = "fastmcp-test"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastmcp>=4.0.5",
+    "typer>=0.27.2",
+    "pytest>=8.4.0",
+    "requests>=2.34.2",
+]
