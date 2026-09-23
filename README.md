@@ -132,6 +132,31 @@ The script starts `mcp_server.py run` using the current Python interpreter and t
 uv run pytest tests/test_mcp_server.py -q
 ```
 
+## FastMCP CLI
+
+`fastmcp` also ships its own CLI (installed as part of the `fastmcp` dependency), which can inspect and run the server object directly without going through the project's Typer wrapper. Reference the server as `mcp_server.py:mcp` (module file plus the exported `FastMCP` instance).
+
+Inspect the server (tools, prompts, resources, versions):
+
+```bash
+uv run fastmcp inspect mcp_server.py:mcp
+```
+
+Run the server directly with the FastMCP CLI:
+
+```bash
+uv run fastmcp run mcp_server.py:mcp --transport stdio
+uv run fastmcp run mcp_server.py:mcp --transport http --port 8000
+```
+
+Display FastMCP version and environment info:
+
+```bash
+uv run fastmcp version
+```
+
+See `uv run fastmcp --help` for the full command list, including `call`, `dev`, and `install`.
+
 ## Notes
 
 - `stdio` is used for local process-to-process MCP communication.
