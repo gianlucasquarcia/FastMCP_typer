@@ -1,4 +1,8 @@
 # FastMCP Test
+![Python](https://img.shields.io/badge/python-3.12%20+-blue.svg)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://docs.astral.sh/uv/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
 
 A small FastMCP server example with a Typer CLI wrapper and both an HTTP client and a stdio client example.
 
@@ -20,15 +24,10 @@ A small FastMCP server example with a Typer CLI wrapper and both an HTTP client 
 
 ## Setup
 
-Create a virtual environment and install project dependencies:
+Install dependencies with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-python -m venv .venv
-# Linux/macOS
-. .venv/bin/activate
-# Windows PowerShell
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e .
+uv sync
 ```
 
 The project metadata in `pyproject.toml` declares the dependencies:
@@ -37,18 +36,46 @@ The project metadata in `pyproject.toml` declares the dependencies:
 - `typer`
 - `pytest`
 
+## Using uv
+
+Run the server:
+
+```bash
+uv run mcp_server.py run
+uv run mcp_server.py run --transport streamable-http --port 8000
+```
+
+Run a client:
+
+```bash
+uv run mcp_http_client.py
+uv run mcp_stdio_client.py
+```
+
+Run tests:
+
+```bash
+uv run pytest tests/test_mcp_server.py -q
+```
+
+Add a new dependency (updates `pyproject.toml` and `uv.lock`):
+
+```bash
+uv add <package>
+```
+
 ## Run the server
 
 Run in stdio mode (default):
 
 ```bash
-python mcp_server.py run
+uv run mcp_server.py run
 ```
 
 Run in HTTP mode:
 
 ```bash
-python mcp_server.py run --transport streamable-http --port 8000
+uv run mcp_server.py run --transport streamable-http --port 8000
 ```
 
 The CLI uses these defaults:
@@ -64,7 +91,7 @@ Those defaults come from environment variables when present:
 ## List registered tools
 
 ```bash
-python mcp_server.py list-tools
+uv run mcp_server.py list-tools
 ```
 
 This calls the Typer `list_tools` command and prints the registered MCP tools and their schema metadata.
@@ -74,13 +101,13 @@ This calls the Typer `list_tools` command and prints the registered MCP tools an
 Start the server in HTTP mode first:
 
 ```bash
-python mcp_server.py run --transport streamable-http --port 8000
+uv run mcp_server.py run --transport streamable-http --port 8000
 ```
 
 Then run the client:
 
 ```bash
-python mcp_http_client.py
+uv run mcp_http_client.py
 ```
 
 The client connects to:
@@ -94,7 +121,7 @@ http://localhost:8000/mcp
 This client launches the server as a subprocess and communicates with it over stdin/stdout:
 
 ```bash
-python mcp_stdio_client.py
+uv run mcp_stdio_client.py
 ```
 
 The script starts `mcp_server.py run` using the current Python interpreter and then calls the `time` tool over stdio transport.
@@ -102,7 +129,7 @@ The script starts `mcp_server.py run` using the current Python interpreter and t
 ## Run tests
 
 ```bash
-python -m pytest tests/test_mcp_server.py -q
+uv run pytest tests/test_mcp_server.py -q
 ```
 
 ## Notes
