@@ -7,4 +7,5 @@ dependencies = [
     "typer>=0.27.2",
     "pytest>=8.4.0",
     "requests>=2.34.2",
+    "ollama>=0.6.2",
 ]

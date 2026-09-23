@@ -4,23 +4,27 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
 
-A small FastMCP server example with a Typer CLI wrapper and both an HTTP client and a stdio client example.
+A small FastMCP server example with a Typer CLI wrapper, HTTP and stdio client examples, and a bridge for local Ollama models.
 
 ## Features
 
 - Exposes a `long_running_greet` MCP tool that simulates a slow async task
 - Exposes a `time` MCP tool that returns the current UTC time
+- Exposes an `open_meteo_current_forecast` MCP tool that fetches live weather data from the Open-Meteo API
 - Includes a Typer CLI for starting the server with stdio or HTTP transport
-- Uses environment-based settings for the default port and transport
-- Includes an HTTP client and a stdio client example for testing and local integration
+- Uses environment-based settings for the default port, transport, and simulated task delay
+- Includes HTTP, stdio, and Ollama-bridging client examples
 
 ## Project layout
 
 - `mcp_server.py` — FastMCP server and Typer CLI entry point
-- `mcp_http_client.py` — HTTP MCP client that connects to the running server
-- `mcp_stdio_client.py` — stdio client that spawns the server as a subprocess
 - `settings.py` — environment-backed configuration
+- `clients/mcp_http_client.py` — HTTP MCP client that connects to a running server
+- `clients/mcp_stdio_client.py` — stdio client that spawns the server as a subprocess
+- `clients/ollama_mcp_client.py` — bridges a local Ollama model to this MCP server's tools over stdio
+- `clients/ollama_mcp_http_client.py` — same Ollama bridge, but over streamable-http against an already-running server
 - `tests/test_mcp_server.py` — tests for tool behavior and CLI commands
+- `.env.template` — template for local environment configuration
 
 ## Setup
 
@@ -30,11 +34,27 @@ Install dependencies with [uv](https://docs.astral.sh/uv/):
 uv sync
 ```
 
+Copy the environment template and adjust values as needed:
+
+```bash
+cp .env.template .env
+```
+
 The project metadata in `pyproject.toml` declares the dependencies:
 
 - `fastmcp`
 - `typer`
 - `pytest`
+- `requests`
+- `ollama`
+
+## Configuration
+
+Settings are read from environment variables (see `settings.py` and `.env.template`):
+
+- `MCP_SERVER_DEFAULT_PORT` (default: `8000`)
+- `MCP_SERVER_DEFAULT_TRANSPORT` (default: `stdio`)
+- `LONG_RUNNING_TASK_FAKE_DELAY` (default: `5`) — seconds `long_running_greet` sleeps to simulate a slow task
 
 ## Using uv
 
@@ -48,8 +68,10 @@ uv run mcp_server.py run --transport streamable-http --port 8000
 Run a client:
 
 ```bash
-uv run mcp_http_client.py
-uv run mcp_stdio_client.py
+uv run clients/mcp_http_client.py
+uv run clients/mcp_stdio_client.py
+uv run clients/ollama_mcp_client.py "What time is it?"
+uv run clients/ollama_mcp_http_client.py "What time is it?"
 ```
 
 Run tests:
@@ -78,15 +100,7 @@ Run in HTTP mode:
 uv run mcp_server.py run --transport streamable-http --port 8000
 ```
 
-The CLI uses these defaults:
-
-- `transport = "stdio"`
-- `port = 8000`
-
-Those defaults come from environment variables when present:
-
-- `MCP_SERVER_DEFAULT_PORT`
-- `MCP_SERVER_DEFAULT_TRANSPORT`
+The CLI defaults (`transport`, `port`) come from `settings.py`, which reads `MCP_SERVER_DEFAULT_TRANSPORT` and `MCP_SERVER_DEFAULT_PORT` from the environment.
 
 ## List registered tools
 
@@ -94,7 +108,7 @@ Those defaults come from environment variables when present:
 uv run mcp_server.py list-tools
 ```
 
-This calls the Typer `list_tools` command and prints the registered MCP tools and their schema metadata.
+This calls the Typer `list_tools` command and prints the name, description, parameters, and output schema of each registered MCP tool.
 
 ## Start the HTTP client
 
@@ -107,24 +121,62 @@ uv run mcp_server.py run --transport streamable-http --port 8000
 Then run the client:
 
 ```bash
-uv run mcp_http_client.py
+uv run clients/mcp_http_client.py
 ```
 
-The client connects to:
-
-```text
-http://localhost:8000/mcp
-```
+The client connects to `http://localhost:8000/mcp` and calls the `time` and `long_running_greet` tools.
 
 ## Start the stdio client
 
-This client launches the server as a subprocess and communicates with it over stdin/stdout:
+This client launches the server as a subprocess and communicates with it over stdin/stdout — no separately running server is needed:
 
 ```bash
-uv run mcp_stdio_client.py
+uv run clients/mcp_stdio_client.py
 ```
 
-The script starts `mcp_server.py run` using the current Python interpreter and then calls the `time` tool over stdio transport.
+The script starts `mcp_server.py run` using the current Python interpreter and calls the `time` tool over stdio transport.
+
+## Connect a local Ollama model
+
+Two variants of the same bridge are provided, depending on which MCP transport you want to use. Both:
+
+1. Connect to the MCP server and list its tools
+2. Convert the tool definitions into the `tools` schema Ollama's chat API expects
+3. Send your prompt to the model
+4. If the model responds with a tool call, forward it to the MCP server via `call_tool`, feed the result back to the model, and repeat until the model returns a final answer
+
+Prerequisites for both:
+
+```bash
+ollama serve
+ollama pull llama3.1   # any tool-calling capable model
+```
+
+### stdio variant
+
+`clients/ollama_mcp_client.py` starts `mcp_server.py` as a stdio subprocess itself (same pattern as `mcp_stdio_client.py`), so no server needs to be running beforehand:
+
+```bash
+uv run clients/ollama_mcp_client.py "What time is it?"
+```
+
+### HTTP variant
+
+`clients/ollama_mcp_http_client.py` connects to an already-running server over streamable-http (same pattern as `mcp_http_client.py`). Start the server first:
+
+```bash
+uv run mcp_server.py run --transport streamable-http --port 8000
+```
+
+Then, in another terminal:
+
+```bash
+uv run clients/ollama_mcp_http_client.py "What time is it?"
+```
+
+It connects to `http://localhost:8000/mcp` by default (see `SERVER_URL` at the top of the file).
+
+Both scripts expose the target model as the `LOCAL_OLLAMA_MODEL` constant at the top of the file (defaults to `llama3.1`).
 
 ## Run tests
 
@@ -162,3 +214,4 @@ See `uv run fastmcp --help` for the full command list, including `call`, `dev`, 
 - `stdio` is used for local process-to-process MCP communication.
 - `streamable-http` is used for HTTP-based MCP transport.
 - The async tool (`long_running_greet`) works without wrapping `mcp.run()` in `asyncio.run(...)`.
+- `open_meteo_current_forecast` calls the public Open-Meteo API and requires network access.
