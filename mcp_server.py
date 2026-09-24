@@ -41,6 +41,11 @@ def open_meteo_current_forecast(latitude: float, longitude: float) -> dict:
         dict: A dictionary containing the current weather forecast data.
     """
 
+    if not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
+        raise ValueError(
+            "Latitude must be between -90 and 90, and longitude must be between -180 and 180."
+        )
+
     retry_strategy = Retry(
         total=3,
         backoff_factor=2,
@@ -53,7 +58,11 @@ def open_meteo_current_forecast(latitude: float, longitude: float) -> dict:
     req.mount("http://", adapter)
 
     url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m"
-    response = req.get(url, verify=False)
+    response = req.get(
+        url,
+        verify=settings.HTTP_REQUEST_TLS_VERIFY,
+        timeout=settings.HTTP_REQUEST_TIMEOUT,
+    )
     response.raise_for_status()  # Raise an error for bad responses
     return response.json()
 
