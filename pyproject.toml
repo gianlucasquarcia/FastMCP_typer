@@ -9,4 +9,12 @@ dependencies = [
     "requests>=2.34.2",
     "ollama>=0.6.2",
     "python-dotenv>=1.2.3",
+    "coverage>=7.16.1",
 ]
+
+[tool.coverage.run]
+source = ["mcp_server", "mcp_server_cli", "settings"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true

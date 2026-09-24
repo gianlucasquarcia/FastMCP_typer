@@ -5,13 +5,12 @@ import json
 import requests
 from fastmcp import FastMCP
 from requests.adapters import HTTPAdapter
-from typer import Typer
 from urllib3 import Retry
 
+from mcp_server_cli import mcp_typer
 from settings import settings
 
 mcp = FastMCP("My Server")
-mcp_typer = Typer(add_completion=False)
 
 
 @mcp.tool(description="Just_say_hello")
@@ -67,23 +66,6 @@ def open_meteo_current_forecast(latitude: float, longitude: float) -> dict:
     return response.json()
 
 
-# MCP Typer CLI commands
-@mcp_typer.command()
-def run(
-    transport: str = settings.MCP_SERVER_DEFAULT_TRANSPORT,
-    port: int | None = settings.MCP_SERVER_DEFAULT_PORT,
-):
-    if transport == "stdio":
-        mcp.run()
-    else:
-        mcp.run(transport="streamable-http", port=port)
-
-
-@mcp_typer.command()
-def list_tools():
-    asyncio.run(list_mcp_tools())
-
-
 async def list_mcp_tools():
     tools = await mcp.list_tools()
     for tool in tools:
@@ -94,5 +76,5 @@ async def list_mcp_tools():
         print("-" * 40)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     mcp_typer()

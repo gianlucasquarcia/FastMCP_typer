@@ -81,7 +81,8 @@ uv run clients/ollama_mcp_http_client.py "What time is it?"
 Run tests:
 
 ```bash
-uv run pytest tests/test_mcp_server.py -q
+uv run coverage run -m pytest -v
+uv run coverage report
 ```
 
 Add a new dependency (updates `pyproject.toml` and `uv.lock`):
@@ -185,7 +186,8 @@ Both scripts expose the target model as the `LOCAL_OLLAMA_MODEL` constant at the
 ## Run tests
 
 ```bash
-uv run pytest tests/test_mcp_server.py -q
+uv run coverage run -m pytest -v
+uv run coverage report
 ```
 
 ## FastMCP CLI

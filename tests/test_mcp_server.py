@@ -1,9 +1,11 @@
 import asyncio
 import re
 
+import pytest
 from typer.testing import CliRunner
 
 import mcp_server
+import mcp_server_cli
 
 runner = CliRunner()
 
@@ -31,6 +33,66 @@ def test_mcp_lists_expected_tools():
     names = {tool.name for tool in tools}
 
     assert {"long_running_greet", "time"}.issubset(names)
+
+
+def test_open_meteo_current_forecast_returns_response_json(monkeypatch):
+    response_data = {"current": {"temperature_2m": 21.5}}
+    requests = []
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return response_data
+
+    class FakeSession:
+        def mount(self, _prefix, _adapter):
+            return None
+
+        def get(self, url, **kwargs):
+            requests.append((url, kwargs))
+            return FakeResponse()
+
+    monkeypatch.setattr(mcp_server.requests, "Session", FakeSession)
+
+    assert mcp_server.open_meteo_current_forecast(45.0, 9.0) == response_data
+    assert "latitude=45.0&longitude=9.0" in requests[0][0]
+    assert requests[0][1] == {
+        "verify": mcp_server.settings.HTTP_REQUEST_TLS_VERIFY,
+        "timeout": mcp_server.settings.HTTP_REQUEST_TIMEOUT,
+    }
+
+
+@pytest.mark.parametrize(
+    ("latitude", "longitude"),
+    [(-90.1, 0), (90.1, 0), (0, -180.1), (0, 180.1)],
+)
+def test_open_meteo_current_forecast_rejects_invalid_coordinates(latitude, longitude):
+    with pytest.raises(ValueError, match="Latitude must be between"):
+        mcp_server.open_meteo_current_forecast(latitude, longitude)
+
+
+def test_server_list_mcp_tools_prints_tool_metadata(monkeypatch, capsys):
+    class FakeTool:
+        def __init__(self):
+            self.name = "example"
+            self.description = "Example tool"
+            self.parameters = {"type": "object"}
+            self.output_schema = {"type": "string"}
+
+    async def fake_list_tools():
+        return [FakeTool()]
+
+    monkeypatch.setattr(mcp_server.mcp, "list_tools", fake_list_tools)
+
+    asyncio.run(mcp_server.list_mcp_tools())
+
+    output = capsys.readouterr().out
+    assert "Tool: example" in output
+    assert "Description: Example tool" in output
+    assert "Parameters:" in output
+    assert "Output Schema:" in output
 
 
 def test_run_command_uses_stdio_by_default(monkeypatch):
@@ -66,3 +128,41 @@ def test_run_command_uses_http_transport_when_requested(monkeypatch):
         "args": (),
         "kwargs": {"transport": "streamable-http", "port": 9001},
     }
+
+
+def test_cli_list_tools_prints_tool_metadata(monkeypatch, capsys):
+    class FakeTool:
+        def __init__(self):
+            self.name = "example"
+            self.description = "Example tool"
+            self.parameters = {"type": "object"}
+            self.output_schema = {"type": "string"}
+
+    class FakeMcp:
+        async def list_tools(self):
+            return [FakeTool()]
+
+    monkeypatch.setattr(mcp_server, "mcp", FakeMcp())
+
+    asyncio.run(mcp_server_cli.list_mcp_tools())
+
+    output = capsys.readouterr().out
+    assert "Tool: example" in output
+    assert "Description: Example tool" in output
+    assert "Parameters:" in output
+    assert "Output Schema:" in output
+
+
+def test_cli_list_tools_command(monkeypatch):
+    calls = []
+
+    def fake_run(coroutine):
+        calls.append(coroutine)
+        coroutine.close()
+
+    monkeypatch.setattr(mcp_server_cli.asyncio, "run", fake_run)
+
+    result = runner.invoke(mcp_server_cli.mcp_typer, ["list-tools"])
+
+    assert result.exit_code == 0
+    assert len(calls) == 1
