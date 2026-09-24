@@ -2,8 +2,11 @@ import asyncio
 import datetime
 import json
 
+import requests
 from fastmcp import FastMCP
+from requests.adapters import HTTPAdapter
 from typer import Typer
+from urllib3 import Retry
 
 from settings import settings
 
@@ -37,10 +40,20 @@ def open_meteo_current_forecast(latitude: float, longitude: float) -> dict:
     Returns:
         dict: A dictionary containing the current weather forecast data.
     """
-    import requests
+
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=2,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["HEAD", "GET", "OPTIONS"],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    req = requests.Session()
+    req.mount("https://", adapter)
+    req.mount("http://", adapter)
 
     url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m"
-    response = requests.get(url, verify=False)
+    response = req.get(url, verify=False)
     response.raise_for_status()  # Raise an error for bad responses
     return response.json()
 
