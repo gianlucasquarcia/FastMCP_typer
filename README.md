@@ -50,11 +50,15 @@ The project metadata in `pyproject.toml` declares the dependencies:
 
 ## Configuration
 
-Settings are read from environment variables (see `settings.py` and `.env.template`):
+Settings are read from environment variables. On startup, `settings.py` loads the
+repository-local `.env` file when present; explicitly set environment variables take
+precedence (see `settings.py` and `.env.template`):
 
 - `MCP_SERVER_DEFAULT_PORT` (default: `8000`)
 - `MCP_SERVER_DEFAULT_TRANSPORT` (default: `stdio`)
 - `LONG_RUNNING_TASK_FAKE_DELAY` (default: `5`) — seconds `long_running_greet` sleeps to simulate a slow task
+- `HTTP_REQUEST_TIMEOUT` (default: `10`) — seconds to wait for Open-Meteo requests
+- `HTTP_REQUEST_TLS_VERIFY` (default: `true`) — whether to verify HTTPS certificates
 
 ## Using uv
 
