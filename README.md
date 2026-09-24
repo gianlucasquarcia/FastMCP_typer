@@ -11,6 +11,8 @@ A small FastMCP server example with a Typer CLI wrapper, HTTP and stdio client e
 - Exposes a `long_running_greet` MCP tool that simulates a slow async task
 - Exposes a `time` MCP tool that returns the current UTC time
 - Exposes an `open_meteo_current_forecast` MCP tool that fetches live weather data from the Open-Meteo API
+- Adds titles, tags, and MCP annotations to tools so clients can identify capabilities and
+  read-only, idempotency, destructive, and external-service hints
 - Includes a Typer CLI for starting the server with stdio or HTTP transport
 - Uses environment-based settings for the default port, transport, and simulated task delay
 - Includes HTTP, stdio, and Ollama-bridging client examples

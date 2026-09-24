@@ -42,7 +42,10 @@ async def list_mcp_tools():
     tools = await mcp.list_tools()
     for tool in tools:
         print(f"Tool: {tool.name}")
+        print(f"Title: {tool.title}")
         print(f"Description: {tool.description}")
+        print(f"Tags: {', '.join(sorted(tool.tags))}")
+        print(f"Annotations: {tool.annotations}")
         print(f"Parameters: {json.dumps(tool.parameters, indent=4)}")
         print(f"Output Schema: {json.dumps(tool.output_schema, indent=4)}")
         print("-" * 40)

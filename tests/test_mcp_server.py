@@ -30,9 +30,24 @@ def test_time_tool_returns_formatted_message():
 
 def test_mcp_lists_expected_tools():
     tools = asyncio.run(mcp_server.mcp.list_tools())
-    names = {tool.name for tool in tools}
+    tools_by_name = {tool.name: tool for tool in tools}
 
-    assert {"long_running_greet", "time"}.issubset(names)
+    assert {"long_running_greet", "time", "open_meteo_current_forecast"}.issubset(
+        tools_by_name
+    )
+    assert tools_by_name["long_running_greet"].title == "Delayed greeting"
+    assert tools_by_name["long_running_greet"].tags == {"async", "demo", "greeting"}
+    assert tools_by_name["long_running_greet"].annotations.read_only_hint is True
+    assert tools_by_name["long_running_greet"].annotations.destructive_hint is False
+    assert tools_by_name["time"].annotations.idempotent_hint is False
+    assert tools_by_name["open_meteo_current_forecast"].tags == {
+        "external-api",
+        "forecast",
+        "weather",
+    }
+    assert (
+        tools_by_name["open_meteo_current_forecast"].annotations.open_world_hint is True
+    )
 
 
 def test_open_meteo_current_forecast_returns_response_json(monkeypatch):
@@ -77,7 +92,10 @@ def test_server_list_mcp_tools_prints_tool_metadata(monkeypatch, capsys):
     class FakeTool:
         def __init__(self):
             self.name = "example"
+            self.title = "Example"
             self.description = "Example tool"
+            self.tags = {"example", "test"}
+            self.annotations = {"readOnlyHint": True}
             self.parameters = {"type": "object"}
             self.output_schema = {"type": "string"}
 
@@ -90,7 +108,10 @@ def test_server_list_mcp_tools_prints_tool_metadata(monkeypatch, capsys):
 
     output = capsys.readouterr().out
     assert "Tool: example" in output
+    assert "Title: Example" in output
     assert "Description: Example tool" in output
+    assert "Tags: example, test" in output
+    assert "Annotations: {'readOnlyHint': True}" in output
     assert "Parameters:" in output
     assert "Output Schema:" in output
 
@@ -134,7 +155,10 @@ def test_cli_list_tools_prints_tool_metadata(monkeypatch, capsys):
     class FakeTool:
         def __init__(self):
             self.name = "example"
+            self.title = "Example"
             self.description = "Example tool"
+            self.tags = {"example", "test"}
+            self.annotations = {"readOnlyHint": True}
             self.parameters = {"type": "object"}
             self.output_schema = {"type": "string"}
 
@@ -148,7 +172,10 @@ def test_cli_list_tools_prints_tool_metadata(monkeypatch, capsys):
 
     output = capsys.readouterr().out
     assert "Tool: example" in output
+    assert "Title: Example" in output
     assert "Description: Example tool" in output
+    assert "Tags: example, test" in output
+    assert "Annotations: {'readOnlyHint': True}" in output
     assert "Parameters:" in output
     assert "Output Schema:" in output
 

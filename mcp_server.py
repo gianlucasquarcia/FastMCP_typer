@@ -13,7 +13,17 @@ from settings import settings
 mcp = FastMCP("My Server")
 
 
-@mcp.tool(description="Just_say_hello")
+@mcp.tool(
+    title="Delayed greeting",
+    description="Return a greeting after the configured simulated delay.",
+    tags={"demo", "greeting", "async"},
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
 async def long_running_greet(name: str) -> str:
     await asyncio.sleep(
         settings.LONG_RUNNING_TASK_FAKE_DELAY
@@ -21,13 +31,33 @@ async def long_running_greet(name: str) -> str:
     return f"Hello, {name}!"
 
 
-@mcp.tool(description="current time")
+@mcp.tool(
+    title="Current UTC time",
+    description="Return the current UTC time in a greeting.",
+    tags={"utility", "time"},
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": False,
+    },
+)
 def time(name: str) -> str:
     now = datetime.datetime.now(tz=datetime.UTC)
     return f"Hello, {name}, the current time is {now}!"
 
 
-@mcp.tool(description="Open-Meteo Current Forecast")
+@mcp.tool(
+    title="Open-Meteo current forecast",
+    description="Get the current temperature and wind speed for geographic coordinates.",
+    tags={"weather", "forecast", "external-api"},
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
 def open_meteo_current_forecast(latitude: float, longitude: float) -> dict:
     """
     Get the current weather forecast for a given latitude and longitude using the Open-Meteo API.
@@ -70,7 +100,10 @@ async def list_mcp_tools():
     tools = await mcp.list_tools()
     for tool in tools:
         print(f"Tool: {tool.name}")
+        print(f"Title: {tool.title}")
         print(f"Description: {tool.description}")
+        print(f"Tags: {', '.join(sorted(tool.tags))}")
+        print(f"Annotations: {tool.annotations}")
         print(f"Parameters: {json.dumps(tool.parameters, indent=4)}")
         print(f"Output Schema: {json.dumps(tool.output_schema, indent=4)}")
         print("-" * 40)
