@@ -14,6 +14,11 @@ async def call_tool(name: str):
         long_result = await mcp_client.call_tool("long_running_greet", {"name": name})
         print(json.dumps(long_result.structured_content, indent=4))
 
+        open_meteo_result = await mcp_client.call_tool(
+            "open_meteo_current_forecast", {"latitude": 40.7128, "longitude": -74.0060}
+        )
+        print(json.dumps(open_meteo_result.structured_content, indent=4))
+
 
 if __name__ == "__main__":
     asyncio.run(call_tool("Ford"))
