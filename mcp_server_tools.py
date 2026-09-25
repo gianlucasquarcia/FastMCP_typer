@@ -33,29 +33,6 @@ def sort_numbers(numbers: list[int]) -> list[int]:
 
 
 @mcp.tool(
-    title="Current GPS Position",
-    description="Return the current GPS position of the server.",
-    tags={"demo", "gps", "position"},
-    annotations={
-        "readOnlyHint": True,
-        "destructiveHint": False,
-        "idempotentHint": True,
-        "openWorldHint": True,
-    },
-)
-def get_current_gps_position() -> dict:
-    """
-    Get the current GPS position of the server.
-
-    Returns:
-        dict: A dictionary containing the latitude and longitude of the server's current GPS position.
-    """
-    # For demonstration purposes, we return a fixed GPS position.
-    # In a real implementation, you would retrieve the actual GPS position from a GPS device or service.
-    return {"latitude": 37.7749, "longitude": -122.4194}  # Example: San Francisco, CA
-
-
-@mcp.tool(
     title="Open-Meteo current forecast",
     description="Get the current temperature and wind speed for geographic coordinates.",
     tags={"weather", "forecast", "external-api"},

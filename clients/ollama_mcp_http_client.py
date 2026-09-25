@@ -208,6 +208,6 @@ async def run(prompt: str) -> None:
 if __name__ == "__main__":
     user_prompt = (
         " ".join(sys.argv[1:])
-        or "What time is it? Where are u? Say hello. Then Sort this list of numbers: 5, 2, 9, 1, 5, 6."
+        or "What time is it? Where are you? Say hello. Then Sort this list of numbers: 5, 2, 9, 1, 5, 6."
     )
     asyncio.run(run(user_prompt))
