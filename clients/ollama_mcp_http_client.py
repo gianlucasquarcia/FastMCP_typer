@@ -19,6 +19,8 @@ from typing import Any
 
 import ollama
 from fastmcp import Client
+from fastmcp.exceptions import ToolError
+from mcp.shared.exceptions import MCPError
 from mcp_types import Resource, ResourceTemplate
 from mcp_types import Tool as MCPTool
 
@@ -169,20 +171,24 @@ async def run(prompt: str) -> None:
                 print(
                     f"-> calling tool '{call.function.name}' with {call.function.arguments}"
                 )
-                if call.function.name == "read_mcp_resource":
-                    resource_result = await mcp_client.read_resource(
-                        str(call.function.arguments["uri"])
-                    )
-                    content = resource_content_to_text(resource_result)
-                else:
-                    call_arguments = normalize_tool_arguments(
-                        input_schemas_by_name.get(call.function.name),
-                        dict(call.function.arguments),
-                    )
-                    result = await mcp_client.call_tool(
-                        call.function.name, call_arguments
-                    )
-                    content = str(result.structured_content)
+                try:
+                    if call.function.name == "read_mcp_resource":
+                        resource_result = await mcp_client.read_resource(
+                            str(call.function.arguments["uri"])
+                        )
+                        content = resource_content_to_text(resource_result)
+                    else:
+                        call_arguments = normalize_tool_arguments(
+                            input_schemas_by_name.get(call.function.name),
+                            dict(call.function.arguments),
+                        )
+                        result = await mcp_client.call_tool(
+                            call.function.name, call_arguments
+                        )
+                        content = str(result.structured_content)
+                except (ToolError, MCPError) as error:
+                    content = f"Error calling '{call.function.name}': {error}"
+                    print(content)
                 messages.append(
                     {
                         "role": "tool",
@@ -202,6 +208,6 @@ async def run(prompt: str) -> None:
 if __name__ == "__main__":
     user_prompt = (
         " ".join(sys.argv[1:])
-        or "What time is it? Say hello. Then Sort this list of numbers: 5, 2, 9, 1, 5, 6."
+        or "What time is it? Where are u? Say hello. Then Sort this list of numbers: 5, 2, 9, 1, 5, 6."
     )
     asyncio.run(run(user_prompt))
