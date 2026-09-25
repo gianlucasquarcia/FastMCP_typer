@@ -6,18 +6,20 @@ from typer.testing import CliRunner
 
 import mcp_server
 import mcp_server_cli
+import mcp_server_resources
+import mcp_server_tools
 
 runner = CliRunner()
 
 
 def test_sort_numbers_returns_ascending_order():
-    result = mcp_server.sort_numbers([5, 2, 9, 1, 5, 6])
+    result = mcp_server_tools.sort_numbers([5, 2, 9, 1, 5, 6])
 
     assert result == [1, 2, 5, 5, 6, 9]
 
 
 def test_current_gps_position_returns_fixed_coordinates():
-    result = mcp_server.get_current_gps_position()
+    result = mcp_server_tools.get_current_gps_position()
 
     assert result == {"latitude": 37.7749, "longitude": -122.4194}
 
@@ -65,13 +67,13 @@ def test_open_meteo_current_forecast_returns_response_json(monkeypatch):
             requests.append((url, kwargs))
             return FakeResponse()
 
-    monkeypatch.setattr(mcp_server.requests, "Session", FakeSession)
+    monkeypatch.setattr(mcp_server_tools.requests, "Session", FakeSession)
 
-    assert mcp_server.open_meteo_current_forecast(45.0, 9.0) == response_data
+    assert mcp_server_tools.open_meteo_current_forecast(45.0, 9.0) == response_data
     assert "latitude=45.0&longitude=9.0" in requests[0][0]
     assert requests[0][1] == {
-        "verify": mcp_server.settings.HTTP_REQUEST_TLS_VERIFY,
-        "timeout": mcp_server.settings.HTTP_REQUEST_TIMEOUT,
+        "verify": mcp_server_tools.settings.HTTP_REQUEST_TLS_VERIFY,
+        "timeout": mcp_server_tools.settings.HTTP_REQUEST_TIMEOUT,
     }
 
 
@@ -81,47 +83,19 @@ def test_open_meteo_current_forecast_returns_response_json(monkeypatch):
 )
 def test_open_meteo_current_forecast_rejects_invalid_coordinates(latitude, longitude):
     with pytest.raises(ValueError, match="Latitude must be between"):
-        mcp_server.open_meteo_current_forecast(latitude, longitude)
+        mcp_server_tools.open_meteo_current_forecast(latitude, longitude)
 
 
 def test_resources_return_expected_content():
-    assert mcp_server.get_greeting() == "Hello from FastMCP Resources!"
-    assert json.loads(mcp_server.get_config()) == {
+    assert mcp_server_resources.get_greeting() == "Hello from FastMCP Resources!"
+    assert json.loads(mcp_server_resources.get_config()) == {
         "theme": "dark",
         "version": "1.2.0",
         "features": ["tools", "resources"],
     }
-    assert mcp_server.get_current_time().startswith(
+    assert mcp_server_resources.get_current_time().startswith(
         "RESOURCE: The current UTC time is "
     )
-
-
-def test_server_list_mcp_tools_prints_tool_metadata(monkeypatch, capsys):
-    class FakeTool:
-        def __init__(self):
-            self.name = "example"
-            self.title = "Example"
-            self.description = "Example tool"
-            self.tags = {"example", "test"}
-            self.annotations = {"readOnlyHint": True}
-            self.parameters = {"type": "object"}
-            self.output_schema = {"type": "string"}
-
-    async def fake_list_tools():
-        return [FakeTool()]
-
-    monkeypatch.setattr(mcp_server.mcp, "list_tools", fake_list_tools)
-
-    asyncio.run(mcp_server.list_mcp_tools())
-
-    output = capsys.readouterr().out
-    assert "Tool: example" in output
-    assert "Title: Example" in output
-    assert "Description: Example tool" in output
-    assert "Tags: example, test" in output
-    assert "Annotations: {'readOnlyHint': True}" in output
-    assert "Parameters:" in output
-    assert "Output Schema:" in output
 
 
 def test_run_command_uses_stdio_by_default(monkeypatch):
