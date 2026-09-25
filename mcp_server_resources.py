@@ -9,7 +9,10 @@ mcp = FastMCP("Resources")
 @mcp.resource(
     "resource://greeting",
     name="Greeting",
+    title="Greeting message",
     description="Return a greeting after the configured simulated delay.",
+    mime_type="text/plain",
+    tags={"demo", "greeting"},
 )
 def get_greeting() -> str:
     """Provides a simple greeting message."""
@@ -19,7 +22,10 @@ def get_greeting() -> str:
 @mcp.resource(
     "resource://config",
     name="Application configuration",
+    title="Application configuration",
     description="Read the current application theme, version, and enabled features.",
+    mime_type="application/json",
+    tags={"demo", "config"},
 )
 def get_config() -> str:
     """Provides application configuration as JSON."""
@@ -35,7 +41,10 @@ def get_config() -> str:
 @mcp.resource(
     "resource://time",
     name="Current UTC time",
+    title="Current UTC time",
     description="Return the current UTC time.",
+    mime_type="text/plain",
+    tags={"demo", "time"},
 )
 def get_current_time() -> str:
     """Provides the current UTC time."""
@@ -46,7 +55,10 @@ def get_current_time() -> str:
 @mcp.resource(
     "resource://gps_position",
     name="Current GPS Position",
+    title="Current GPS position",
     description="Return the current GPS position of the server.",
+    mime_type="application/json",
+    tags={"demo", "gps", "position"},
 )
 def get_current_gps_position() -> dict:
     """
