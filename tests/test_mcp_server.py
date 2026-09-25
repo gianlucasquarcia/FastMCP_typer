@@ -1,5 +1,5 @@
 import asyncio
-import re
+import json
 
 import pytest
 from typer.testing import CliRunner
@@ -10,36 +10,32 @@ import mcp_server_cli
 runner = CliRunner()
 
 
-def test_long_running_greet_returns_expected_message(monkeypatch):
-    async def fake_sleep(_seconds):
-        return None
+def test_sort_numbers_returns_ascending_order():
+    result = mcp_server.sort_numbers([5, 2, 9, 1, 5, 6])
 
-    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
-
-    result = asyncio.run(mcp_server.long_running_greet("Alice"))
-
-    assert result == "Hello, Alice!"
+    assert result == [1, 2, 5, 5, 6, 9]
 
 
-def test_time_tool_returns_formatted_message():
-    result = mcp_server.time("Alice")
+def test_current_gps_position_returns_fixed_coordinates():
+    result = mcp_server.get_current_gps_position()
 
-    assert result.startswith("Hello, Alice, the current time is ")
-    assert re.search(r"\d{4}-\d{2}-\d{2}", result)
+    assert result == {"latitude": 37.7749, "longitude": -122.4194}
 
 
 def test_mcp_lists_expected_tools():
     tools = asyncio.run(mcp_server.mcp.list_tools())
     tools_by_name = {tool.name: tool for tool in tools}
 
-    assert {"long_running_greet", "time", "open_meteo_current_forecast"}.issubset(
-        tools_by_name
-    )
-    assert tools_by_name["long_running_greet"].title == "Delayed greeting"
-    assert tools_by_name["long_running_greet"].tags == {"async", "demo", "greeting"}
-    assert tools_by_name["long_running_greet"].annotations.read_only_hint is True
-    assert tools_by_name["long_running_greet"].annotations.destructive_hint is False
-    assert tools_by_name["time"].annotations.idempotent_hint is False
+    assert {
+        "sort_numbers",
+        "get_current_gps_position",
+        "open_meteo_current_forecast",
+    }.issubset(tools_by_name)
+    assert tools_by_name["sort_numbers"].title == "Sort Numbers"
+    assert tools_by_name["sort_numbers"].tags == {"demo", "sorting", "numbers"}
+    assert tools_by_name["sort_numbers"].annotations.read_only_hint is True
+    assert tools_by_name["sort_numbers"].annotations.destructive_hint is False
+    assert tools_by_name["get_current_gps_position"].annotations.idempotent_hint is True
     assert tools_by_name["open_meteo_current_forecast"].tags == {
         "external-api",
         "forecast",
@@ -86,6 +82,18 @@ def test_open_meteo_current_forecast_returns_response_json(monkeypatch):
 def test_open_meteo_current_forecast_rejects_invalid_coordinates(latitude, longitude):
     with pytest.raises(ValueError, match="Latitude must be between"):
         mcp_server.open_meteo_current_forecast(latitude, longitude)
+
+
+def test_resources_return_expected_content():
+    assert mcp_server.get_greeting() == "Hello from FastMCP Resources!"
+    assert json.loads(mcp_server.get_config()) == {
+        "theme": "dark",
+        "version": "1.2.0",
+        "features": ["tools", "resources"],
+    }
+    assert mcp_server.get_current_time().startswith(
+        "RESOURCE: The current UTC time is "
+    )
 
 
 def test_server_list_mcp_tools_prints_tool_metadata(monkeypatch, capsys):

@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import json
 
@@ -14,37 +13,50 @@ mcp = FastMCP("My Server")
 
 
 @mcp.tool(
-    title="Delayed greeting",
-    description="Return a greeting after the configured simulated delay.",
-    tags={"demo", "greeting", "async"},
+    title="Sort Numbers",
+    description="Sort a list of numbers in ascending order.",
+    tags={"demo", "sorting", "numbers"},
     annotations={
         "readOnlyHint": True,
         "destructiveHint": False,
         "idempotentHint": True,
-        "openWorldHint": False,
+        "openWorldHint": True,
     },
 )
-async def long_running_greet(name: str) -> str:
-    await asyncio.sleep(
-        settings.LONG_RUNNING_TASK_FAKE_DELAY
-    )  # Simulate a long-running task
-    return f"Hello, {name}!"
+def sort_numbers(numbers: list[int]) -> list[int]:
+    """
+    Sort a list of numbers in ascending order.
+
+    Args:
+        numbers (list[int]): A list of numbers to be sorted.
+
+    Returns:
+        list[int]: The sorted list of numbers in ascending order.
+    """
+    return sorted(numbers)
 
 
 @mcp.tool(
-    title="Current UTC time",
-    description="Return the current UTC time in a greeting.",
-    tags={"utility", "time"},
+    title="Current GPS Position",
+    description="Return the current GPS position of the server.",
+    tags={"demo", "gps", "position"},
     annotations={
         "readOnlyHint": True,
         "destructiveHint": False,
-        "idempotentHint": False,
-        "openWorldHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
     },
 )
-def time(name: str) -> str:
-    now = datetime.datetime.now(tz=datetime.UTC)
-    return f"Hello, {name}, the current time is {now}!"
+def get_current_gps_position() -> dict:
+    """
+    Get the current GPS position of the server.
+
+    Returns:
+        dict: A dictionary containing the latitude and longitude of the server's current GPS position.
+    """
+    # For demonstration purposes, we return a fixed GPS position.
+    # In a real implementation, you would retrieve the actual GPS position from a GPS device or service.
+    return {"latitude": 37.7749, "longitude": -122.4194}  # Example: San Francisco, CA
 
 
 @mcp.tool(
@@ -94,6 +106,45 @@ def open_meteo_current_forecast(latitude: float, longitude: float) -> dict:
     )
     response.raise_for_status()  # Raise an error for bad responses
     return response.json()
+
+
+# Basic dynamic resource returning a string
+@mcp.resource(
+    "resource://greeting",
+    name="Greeting",
+    description="Return a greeting after the configured simulated delay.",
+)
+def get_greeting() -> str:
+    """Provides a simple greeting message."""
+    return "Hello from FastMCP Resources!"
+
+
+# Resource returning JSON data
+@mcp.resource(
+    "resource://config",
+    name="Application configuration",
+    description="Read the current application theme, version, and enabled features.",
+)
+def get_config() -> str:
+    """Provides application configuration as JSON."""
+    return json.dumps(
+        {
+            "theme": "dark",
+            "version": "1.2.0",
+            "features": ["tools", "resources"],
+        }
+    )
+
+
+@mcp.resource(
+    "resource://time",
+    name="Current UTC time",
+    description="Return the current UTC time.",
+)
+def get_current_time() -> str:
+    """Provides the current UTC time."""
+    now = datetime.datetime.now(tz=datetime.UTC)
+    return f"RESOURCE: The current UTC time is {now}."
 
 
 async def list_mcp_tools():

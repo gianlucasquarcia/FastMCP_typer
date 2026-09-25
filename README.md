@@ -185,6 +185,11 @@ It connects to `http://localhost:8000/mcp` by default (see `SERVER_URL` at the t
 
 Both scripts expose the target model as the `LOCAL_OLLAMA_MODEL` constant at the top of the file (defaults to `llama3.1`).
 
+The HTTP Ollama bridge also discovers MCP resources and resource templates. Because Ollama
+supports function tools rather than native MCP resources, it presents a read-only
+`read_mcp_resource(uri)` function to the model and forwards each requested URI through
+MCP's `resources/read` operation.
+
 ## Run tests
 
 ```bash
