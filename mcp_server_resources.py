@@ -1,7 +1,9 @@
 import datetime
 import json
 
-from mcp_server import mcp
+from fastmcp import FastMCP
+
+mcp = FastMCP("Resources")
 
 
 @mcp.resource(

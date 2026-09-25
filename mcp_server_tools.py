@@ -1,9 +1,11 @@
 import requests
+from fastmcp import FastMCP
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
-from mcp_server import mcp
 from settings import settings
+
+mcp = FastMCP("Tools")
 
 
 @mcp.tool(
