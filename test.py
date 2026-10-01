@@ -122,12 +122,24 @@ async def _wait_for_server(url: str, timeout: float = STARTUP_TIMEOUT) -> None:
 
 
 def _stop_server(proc: subprocess.Popen) -> None:
-    """Gracefully stop the server subprocess."""
+    """Stop the server subprocess (and any children it spawned).
+
+    On Windows, a venv's python.exe can be a launcher stub that execs the
+    real interpreter as a *child* process. By the time that stub has exited
+    (gracefully or not), the OS may have already severed the parent/child
+    link, so the grandchild running the actual server becomes an orphan that
+    taskkill can no longer find via the tree. To avoid that race, kill the
+    whole process tree immediately while the relationship is still live,
+    rather than waiting for a graceful shutdown first.
+    """
+    if os.name == "nt":
+        _kill_process_tree(proc)
+        proc.wait()
+        return
+
     if proc.poll() is None:
         try:
-            proc.send_signal(
-                signal.CTRL_BREAK_EVENT if os.name == "nt" else signal.SIGTERM
-            )
+            proc.send_signal(signal.SIGTERM)
         except (ValueError, OSError):
             proc.terminate()
         try:
@@ -135,6 +147,18 @@ def _stop_server(proc: subprocess.Popen) -> None:
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
+
+
+def _kill_process_tree(proc: subprocess.Popen) -> None:
+    """Force-kill a process and all of its descendants, if still alive."""
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    elif proc.poll() is None:
+        proc.kill()
 
 
 # ---------------------------------------------------------------------------
