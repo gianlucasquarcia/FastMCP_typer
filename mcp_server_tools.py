@@ -1,3 +1,5 @@
+import asyncio
+
 import requests
 from fastmcp import FastMCP
 from requests.adapters import HTTPAdapter
@@ -6,6 +8,33 @@ from urllib3 import Retry
 from settings import settings
 
 mcp = FastMCP("Tools")
+
+
+@mcp.tool(
+    title="Long Running Greet",
+    description="Simulate a slow async task, then greet the given name.",
+    tags={"demo", "greeting", "async"},
+    annotations={
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def long_running_greet(name: str) -> str:
+    """
+    Simulate a long-running task and return a greeting.
+
+    Args:
+        name (str): The name to greet.
+
+    Returns:
+        str: A greeting message for the given name.
+    """
+    await asyncio.sleep(
+        settings.LONG_RUNNING_TASK_FAKE_DELAY
+    )  # Simulate a long-running task
+    return f"Hello, {name}!"
 
 
 @mcp.tool(

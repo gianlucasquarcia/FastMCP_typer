@@ -19,7 +19,10 @@ A small FastMCP server example with a Typer CLI wrapper, HTTP and stdio client e
 
 ## Project layout
 
-- `mcp_server.py` — FastMCP server and Typer CLI entry point
+- `mcp_server.py` — assembles the FastMCP server by mounting the tools and resources sub-servers
+- `mcp_server_tools.py` — MCP tool definitions (`long_running_greet`, `sort_numbers`, `open_meteo_current_forecast`)
+- `mcp_server_resources.py` — MCP resource definitions (greeting, config, time, GPS position)
+- `mcp_server_cli.py` — Typer CLI entry point (`run`, `list-tools` commands)
 - `settings.py` — environment-backed configuration
 - `clients/mcp_http_client.py` — HTTP MCP client that connects to a running server
 - `clients/mcp_stdio_client.py` — stdio client that spawns the server as a subprocess
