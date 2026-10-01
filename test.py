@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import os
 import signal
@@ -29,8 +30,9 @@ import sys
 import tempfile
 import time
 from pathlib import Path
+from typing import IO, Any
 
-import httpx
+import httpx2
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
@@ -65,7 +67,7 @@ def _section(title: str) -> None:
     print(f"{'=' * 60}")
 
 
-def _print_result(result) -> dict | list | None:
+def _print_result(result) -> Any:
     """Pretty-print a tool result and return the parsed JSON."""
     try:
         text = result.content[0].text
@@ -83,21 +85,25 @@ def _print_result(result) -> dict | list | None:
 
 
 class ServerHandle:
-    """A running server subprocess plus its captured output.
+    """A running server subprocess plus its captured stderr.
 
-    Output is captured to temporary files rather than subprocess.PIPE.
-    A pipe has a small OS buffer; if the child writes enough (e.g. request
-    logs) before anyone reads it, the child blocks on write() — which can
-    make the server unresponsive to HTTP requests, and can also deadlock a
-    later blocking read() of the other stream. Files never block writers,
-    so this class of deadlock can't happen regardless of how much the
-    server logs or when/whether we read it back.
+    Output is never sent to subprocess.PIPE. A pipe has a small OS buffer;
+    if the child writes enough (e.g. request logs) before anyone reads it,
+    the child blocks on write() — which can make the server unresponsive to
+    HTTP requests, and can also deadlock a later blocking read() of the
+    other stream. stdout is discarded and stderr goes to a temp file, so
+    the child never blocks on output regardless of how much it logs.
     """
 
-    def __init__(self, proc: subprocess.Popen, stdout_file, stderr_file):
+    def __init__(
+        self,
+        proc: subprocess.Popen,
+        stderr_file: IO[bytes],
+        resources: contextlib.ExitStack,
+    ):
         self.proc = proc
-        self._stdout_file = stdout_file
         self._stderr_file = stderr_file
+        self._resources = resources
 
     def read_stderr(self) -> str:
         """Read everything the server has written to stderr so far."""
@@ -106,8 +112,7 @@ class ServerHandle:
         return data.decode(errors="replace") if data else ""
 
     def close(self) -> None:
-        self._stdout_file.close()
-        self._stderr_file.close()
+        self._resources.close()
 
 
 def _start_server(port: int, env_overrides: dict[str, str]) -> ServerHandle:
@@ -116,37 +121,38 @@ def _start_server(port: int, env_overrides: dict[str, str]) -> ServerHandle:
     # On Windows, isolate the child in its own process group so that signaling
     # it to stop later (CTRL_BREAK_EVENT) does not also terminate this script.
     creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
-    stdout_file = tempfile.TemporaryFile()
-    stderr_file = tempfile.TemporaryFile()
-    proc = subprocess.Popen(
-        [
-            sys.executable,
-            str(SERVER_PY),
-            "run",
-            "--transport",
-            "http",
-            "--port",
-            str(port),
-        ],
-        cwd=SERVER_DIR,
-        env=env,
-        stdout=stdout_file,
-        stderr=stderr_file,
-        creationflags=creationflags,
-    )
-    return ServerHandle(proc, stdout_file, stderr_file)
+    with contextlib.ExitStack() as stack:
+        stderr_file = stack.enter_context(tempfile.TemporaryFile())
+        proc = subprocess.Popen(
+            [
+                sys.executable,
+                str(SERVER_PY),
+                "run",
+                "--transport",
+                "http",
+                "--port",
+                str(port),
+            ],
+            cwd=SERVER_DIR,
+            env=env,
+            stdout=subprocess.DEVNULL,
+            stderr=stderr_file,
+            creationflags=creationflags,
+        )
+        # Hand ownership of the temp file to the handle (closed in _stop_server).
+        return ServerHandle(proc, stderr_file, stack.pop_all())
 
 
 async def _wait_for_server(url: str, timeout: float = STARTUP_TIMEOUT) -> None:
     """Poll the server until it accepts connections."""
     deadline = time.monotonic() + timeout
-    async with httpx.AsyncClient() as client:
+    async with httpx2.AsyncClient() as client:
         while time.monotonic() < deadline:
             try:
                 resp = await client.get(url)
                 if resp.status_code < 500:
                     return
-            except httpx.ConnectError:
+            except httpx2.ConnectError:
                 pass
             await asyncio.sleep(0.3)
     raise TimeoutError(f"Server did not start within {timeout}s")
@@ -189,6 +195,7 @@ def _kill_process_tree(proc: subprocess.Popen) -> None:
             ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            check=False,
         )
     elif proc.poll() is None:
         proc.kill()
@@ -267,17 +274,16 @@ async def run_tests(
     """Connect to the local server and run all tests."""
     mcp_url = f"http://localhost:{port}/mcp"
 
-    async with httpx.AsyncClient(timeout=httpx.Timeout(TOOL_TIMEOUT)) as http:
-        async with streamable_http_client(mcp_url, http_client=http) as (
-            read,
-            write,
-        ):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
+    async with (
+        httpx2.AsyncClient(timeout=httpx2.Timeout(TOOL_TIMEOUT)) as http,
+        streamable_http_client(mcp_url, http_client=http) as (read, write),
+        ClientSession(read, write) as session,
+    ):
+        await session.initialize()
 
-                await test_list_tools(session)
-                await test_sort_numbers(session, numbers)
-                await test_open_meteo_current_forecast(session, latitude, longitude)
+        await test_list_tools(session)
+        await test_sort_numbers(session, numbers)
+        await test_open_meteo_current_forecast(session, latitude, longitude)
 
     return True
 
@@ -354,7 +360,7 @@ def main():
             print(f"\n  Server stderr:\n{stderr[:2000]}")
         sys.exit(1)
 
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - top-level CLI: report any failure
         print(f"\n  [FAIL] {exc}")
         sys.exit(1)
 

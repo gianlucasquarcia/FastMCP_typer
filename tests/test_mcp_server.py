@@ -31,16 +31,18 @@ def test_mcp_lists_expected_tools():
     assert {"sort_numbers", "open_meteo_current_forecast"}.issubset(tools_by_name)
     assert tools_by_name["sort_numbers"].title == "Sort Numbers"
     assert tools_by_name["sort_numbers"].tags == {"demo", "sorting", "numbers"}
-    assert tools_by_name["sort_numbers"].annotations.read_only_hint is True
-    assert tools_by_name["sort_numbers"].annotations.destructive_hint is False
+    sort_annotations = tools_by_name["sort_numbers"].annotations
+    assert sort_annotations is not None
+    assert sort_annotations.read_only_hint is True
+    assert sort_annotations.destructive_hint is False
     assert tools_by_name["open_meteo_current_forecast"].tags == {
         "external-api",
         "forecast",
         "weather",
     }
-    assert (
-        tools_by_name["open_meteo_current_forecast"].annotations.open_world_hint is True
-    )
+    forecast_annotations = tools_by_name["open_meteo_current_forecast"].annotations
+    assert forecast_annotations is not None
+    assert forecast_annotations.open_world_hint is True
 
 
 def test_open_meteo_current_forecast_returns_response_json(monkeypatch):
