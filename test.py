@@ -26,6 +26,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -35,7 +36,7 @@ from mcp.client.streamable_http import streamable_http_client
 
 SERVER_DIR = Path(__file__).resolve().parent
 SERVER_PY = SERVER_DIR / "mcp_server_cli.py"
-STARTUP_TIMEOUT = 15
+STARTUP_TIMEOUT = 30
 TOOL_TIMEOUT = 30
 
 
@@ -81,12 +82,42 @@ def _print_result(result) -> dict | list | None:
 # ---------------------------------------------------------------------------
 
 
-def _start_server(port: int, env_overrides: dict[str, str]) -> subprocess.Popen:
+class ServerHandle:
+    """A running server subprocess plus its captured output.
+
+    Output is captured to temporary files rather than subprocess.PIPE.
+    A pipe has a small OS buffer; if the child writes enough (e.g. request
+    logs) before anyone reads it, the child blocks on write() — which can
+    make the server unresponsive to HTTP requests, and can also deadlock a
+    later blocking read() of the other stream. Files never block writers,
+    so this class of deadlock can't happen regardless of how much the
+    server logs or when/whether we read it back.
+    """
+
+    def __init__(self, proc: subprocess.Popen, stdout_file, stderr_file):
+        self.proc = proc
+        self._stdout_file = stdout_file
+        self._stderr_file = stderr_file
+
+    def read_stderr(self) -> str:
+        """Read everything the server has written to stderr so far."""
+        self._stderr_file.seek(0)
+        data = self._stderr_file.read()
+        return data.decode(errors="replace") if data else ""
+
+    def close(self) -> None:
+        self._stdout_file.close()
+        self._stderr_file.close()
+
+
+def _start_server(port: int, env_overrides: dict[str, str]) -> ServerHandle:
     """Launch the MCP server as a subprocess on the given port."""
     env = {**os.environ, **env_overrides}
     # On Windows, isolate the child in its own process group so that signaling
     # it to stop later (CTRL_BREAK_EVENT) does not also terminate this script.
     creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    stdout_file = tempfile.TemporaryFile()
+    stderr_file = tempfile.TemporaryFile()
     proc = subprocess.Popen(
         [
             sys.executable,
@@ -99,11 +130,11 @@ def _start_server(port: int, env_overrides: dict[str, str]) -> subprocess.Popen:
         ],
         cwd=SERVER_DIR,
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=stdout_file,
+        stderr=stderr_file,
         creationflags=creationflags,
     )
-    return proc
+    return ServerHandle(proc, stdout_file, stderr_file)
 
 
 async def _wait_for_server(url: str, timeout: float = STARTUP_TIMEOUT) -> None:
@@ -121,7 +152,7 @@ async def _wait_for_server(url: str, timeout: float = STARTUP_TIMEOUT) -> None:
     raise TimeoutError(f"Server did not start within {timeout}s")
 
 
-def _stop_server(proc: subprocess.Popen) -> None:
+def _stop_server(handle: ServerHandle) -> None:
     """Stop the server subprocess (and any children it spawned).
 
     On Windows, a venv's python.exe can be a launcher stub that execs the
@@ -132,21 +163,23 @@ def _stop_server(proc: subprocess.Popen) -> None:
     whole process tree immediately while the relationship is still live,
     rather than waiting for a graceful shutdown first.
     """
-    if os.name == "nt":
-        _kill_process_tree(proc)
-        proc.wait()
-        return
-
-    if proc.poll() is None:
-        try:
-            proc.send_signal(signal.SIGTERM)
-        except (ValueError, OSError):
-            proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
+    proc = handle.proc
+    try:
+        if os.name == "nt":
+            _kill_process_tree(proc)
             proc.wait()
+        elif proc.poll() is None:
+            try:
+                proc.send_signal(signal.SIGTERM)
+            except (ValueError, OSError):
+                proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+    finally:
+        handle.close()
 
 
 def _kill_process_tree(proc: subprocess.Popen) -> None:
@@ -298,7 +331,7 @@ def main():
     print(f"  port:    {port}")
     print(f"  server:  {SERVER_PY}")
 
-    proc = _start_server(port, {})
+    handle = _start_server(port, {})
     try:
         asyncio.run(_wait_for_server(f"http://localhost:{port}/mcp"))
         print("  Server is up.\n")
@@ -316,7 +349,7 @@ def main():
 
     except TimeoutError:
         print(f"\n  [FAIL] Server did not start within {STARTUP_TIMEOUT}s")
-        stderr = proc.stderr.read().decode() if proc.stderr else ""
+        stderr = handle.read_stderr()
         if stderr:
             print(f"\n  Server stderr:\n{stderr[:2000]}")
         sys.exit(1)
@@ -326,7 +359,7 @@ def main():
         sys.exit(1)
 
     finally:
-        _stop_server(proc)
+        _stop_server(handle)
         print("  Server stopped.")
 
 
