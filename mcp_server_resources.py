@@ -48,7 +48,7 @@ def get_config() -> str:
 )
 def get_current_time() -> str:
     """Provides the current UTC time."""
-    now = datetime.datetime.now(tz=datetime.UTC)
+    now = datetime.datetime.now(tz=datetime.timezone.utc)
     return f"RESOURCE: The current UTC time is {now}."
 
 

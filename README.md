@@ -1,5 +1,5 @@
 # FastMCP Test
-![Python](https://img.shields.io/badge/python-3.12%20+-blue.svg)
+![Python](https://img.shields.io/badge/python-3.10%20--%203.14-blue.svg)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://docs.astral.sh/uv/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![ty](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ty/main/assets/badge/v0.json)](https://github.com/astral-sh/ty)
@@ -85,6 +85,13 @@ Run tests:
 ```bash
 uv run coverage run -m pytest -v
 uv run coverage report
+```
+
+Run the full test suite (pytest and `test.py`) across Python 3.10–3.14 with [tox](https://tox.wiki/) (requires those interpreters to be installed and discoverable, e.g. via `py -0p`):
+
+```bash
+uv run tox
+uv run tox -e py312  # run a single environment
 ```
 
 Add a new dependency (updates `pyproject.toml` and `uv.lock`):
