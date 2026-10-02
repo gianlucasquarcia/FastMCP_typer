@@ -1,4 +1,4 @@
-# FastMCP Test
+# FastMCP Server template
 ![Python](https://img.shields.io/badge/python-3.10%20--%203.14-blue.svg)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://docs.astral.sh/uv/)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)

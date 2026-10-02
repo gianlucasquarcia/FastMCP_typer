@@ -100,7 +100,7 @@ def open_meteo_current_forecast(latitude: float, longitude: float) -> dict:
     req.mount("https://", adapter)
     req.mount("http://", adapter)
 
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m"
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,wind_speed_10m"
     response = req.get(
         url,
         verify=settings.HTTP_REQUEST_TLS_VERIFY,
