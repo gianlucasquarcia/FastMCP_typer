@@ -40,6 +40,15 @@ uv run tox          # full Python 3.10-3.14 matrix
 - Update `README.md` when you change tools, resources, settings or layout.
 - Keep commits focused, with clear messages.
 
+## Releasing
+
+Maintainers publish a release by pushing a version tag; the `Release` workflow creates the GitHub release with generated notes:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
 ## GitHub Copilot
 
 Repository guidance for Copilot lives in `.github/copilot-instructions.md`, `.github/instructions/` and `.github/prompts/`. Keep those files in sync with this document when conventions change.
