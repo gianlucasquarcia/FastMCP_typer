@@ -1,7 +1,9 @@
 import asyncio
 import json
+from types import SimpleNamespace
 
 import pytest
+from fastmcp import Client
 from typer.testing import CliRunner
 
 import mcp_server
@@ -16,6 +18,37 @@ def test_sort_numbers_returns_ascending_order():
     result = mcp_server_tools.sort_numbers([5, 2, 9, 1, 5, 6])
 
     assert result == [1, 2, 5, 5, 6, 9]
+
+
+def test_long_running_greet_reports_progress_and_greets(monkeypatch):
+    monkeypatch.setattr(
+        mcp_server_tools,
+        "settings",
+        SimpleNamespace(LONG_RUNNING_TASK_FAKE_DELAY=0),
+    )
+    progress = []
+
+    async def progress_handler(value, total, _message):
+        progress.append((value, total))
+
+    async def run():
+        async with Client(
+            mcp_server.mcp,
+            progress_handler=progress_handler,
+        ) as client:
+            return await client.call_tool("long_running_greet", {"name": "Ada"})
+
+    result = asyncio.run(run())
+
+    assert result.data == "Hello, Ada!"
+    assert progress == [(0, 1), (1, 1)]
+
+
+def test_long_running_greet_hides_ctx_from_schema():
+    tools = asyncio.run(mcp_server.mcp.list_tools())
+    tool = next(t for t in tools if t.name == "long_running_greet")
+
+    assert list(tool.parameters["properties"]) == ["name"]
 
 
 def test_current_gps_position_returns_fixed_coordinates():
