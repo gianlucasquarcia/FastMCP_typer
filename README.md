@@ -30,6 +30,7 @@ A small FastMCP server example with a Typer CLI wrapper, HTTP and stdio client e
 - `clients/ollama_mcp_http_client.py` — same Ollama bridge, but over streamable-http against an already-running server
 - `tests/test_mcp_server.py` — tests for tool behavior and CLI commands
 - `.env.template` — template for local environment configuration
+- `CONTRIBUTING.md` — contributor guide
 - `.github/copilot-instructions.md` — repository-wide GitHub Copilot instructions
 - `.github/instructions/*.instructions.md` — path-scoped Copilot instructions (tests, server, clients)
 - `.github/prompts/*.prompt.md` — reusable Copilot prompts (`/add-mcp-tool`, `/add-mcp-resource`, `/review-changes`)
