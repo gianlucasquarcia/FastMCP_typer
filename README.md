@@ -31,6 +31,7 @@ A small FastMCP server example with a Typer CLI wrapper, HTTP and stdio client e
 - `tests/test_mcp_server.py` — tests for tool behavior and CLI commands
 - `.env.template` — template for local environment configuration
 - `CONTRIBUTING.md` — contributor guide
+- `SECURITY.md` — security policy and vulnerability reporting
 - `.github/copilot-instructions.md` — repository-wide GitHub Copilot instructions
 - `.github/instructions/*.instructions.md` — path-scoped Copilot instructions (tests, server, clients)
 - `.github/prompts/*.prompt.md` — reusable Copilot prompts (`/add-mcp-tool`, `/add-mcp-resource`, `/review-changes`)
