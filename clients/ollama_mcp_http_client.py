@@ -230,7 +230,9 @@ def resolve_prompt_call(
     return None, {}
 
 
-def extract_tool_calls(message: Any, callable_names: set[str]) -> list[tuple[str, dict]]:
+def extract_tool_calls(
+    message: Any, callable_names: set[str]
+) -> list[tuple[str, dict]]:
     """Return ``(name, arguments)`` pairs for the tool calls in an Ollama reply.
 
     Uses the structured ``tool_calls`` when present. Otherwise looks for a JSON
@@ -292,9 +294,7 @@ def unwrap_tool_arguments(
     if "arguments" not in arguments or "arguments" in properties:
         return arguments
     for key in ("name", "tool"):
-        if key in arguments and (
-            arguments[key] != tool_name or key in properties
-        ):
+        if key in arguments and (arguments[key] != tool_name or key in properties):
             return arguments
     extra_keys = set(arguments) - {"arguments", "name", "tool"}
     if extra_keys:
@@ -480,7 +480,13 @@ async def run(prompt: str) -> None:
                         )
                         result = await mcp_client.call_tool(name, call_arguments)
                         content = json.dumps(result.structured_content)
-                except (ToolError, MCPError, ValueError, TypeError, SyntaxError) as error:
+                except (
+                    ToolError,
+                    MCPError,
+                    ValueError,
+                    TypeError,
+                    SyntaxError,
+                ) as error:
                     content = f"Error calling '{name}': {error}"
                     logger.info("%s", content)
                 messages.append(
@@ -553,5 +559,8 @@ if __name__ == "__main__":
     #     " ".join(cli_args)
     #     or "What time is it? Where are you? Say hello. Then Sort this list of numbers: 5, 2, 9, 1, 5, 6. What is the current temperature and wind speed in Rome, Italy? lat=41.9028, lon=12.4964"
     # )
-    user_prompt = " ".join(cli_args) or "Say hello and then tell me what is the weather at lat=41.9028 lon=12.4964"
+    user_prompt = (
+        " ".join(cli_args)
+        or "Say hello and then tell me what is the weather at lat=41.9028 lon=12.4964"
+    )
     asyncio.run(run(user_prompt))

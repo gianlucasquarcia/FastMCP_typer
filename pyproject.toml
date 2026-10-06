@@ -23,6 +23,7 @@ show_missing = true
 
 [dependency-groups]
 dev = [
+    "ruff>=0.16.10",
     "tox>=4.64.6",
     "tox-uv>=1.36.0",
 ]
