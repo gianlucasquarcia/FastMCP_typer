@@ -46,7 +46,7 @@ Maintainers publish a release by pushing a version tag; the `Release` workflow c
 
 ```bash
 git tag v1.0.0
-git push origin v1.0.0
+git push origin v1.0.0   # push the tag explicitly; --follow-tags skips lightweight tags
 ```
 
 ## GitHub Copilot
