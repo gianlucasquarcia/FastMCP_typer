@@ -243,9 +243,7 @@ async def test_open_meteo_current_forecast(
     session: ClientSession, latitude: float, longitude: float
 ) -> dict:
     """Call the open_meteo_current_forecast tool and validate the response shape."""
-    _section(
-        f"TEST: open_meteo_current_forecast(latitude={latitude}, longitude={longitude})"
-    )
+    _section("TEST: open_meteo_current_forecast")
 
     t0 = time.time()
     result = await session.call_tool(
