@@ -124,6 +124,22 @@ uv run mcp_server.py run --transport streamable-http --port 8000
 
 The CLI defaults (`transport`, `port`) come from `settings.py`, which reads `MCP_SERVER_DEFAULT_TRANSPORT` and `MCP_SERVER_DEFAULT_PORT` from the environment.
 
+## Run with Docker
+
+Build the image:
+
+```bash
+docker build -t fastmcp-typer .
+```
+
+Run it (the image defaults to `streamable-http` transport on port 8000, bound to all interfaces via `FASTMCP_HOST=0.0.0.0`):
+
+```bash
+docker run --rm -p 8000:8000 fastmcp-typer
+```
+
+The server will be reachable at `http://localhost:8000/mcp`. Override settings with `-e`, e.g. `-e MCP_SERVER_DEFAULT_PORT=9000 -p 9000:9000`.
+
 ## List registered tools
 
 ```bash
