@@ -319,7 +319,7 @@ uncalled-for==0.4.0
     # via fastmcp-slim
 urllib3==2.8.0
     # via requests
-uv==0.12.23
+uv==0.13.4
     # via tox-uv
 uvicorn==0.54.0
     # via
