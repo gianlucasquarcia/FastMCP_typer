@@ -37,7 +37,7 @@ caio==0.9.25 ; python_full_version < '3.11'
     # via aiofile
 caio==0.12.9 ; python_full_version >= '3.11'
     # via aiofile
-certifi==2026.7.22
+certifi==2026.10.19
     # via
     #   httpcore
     #   httpx
